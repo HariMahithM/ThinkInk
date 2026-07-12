@@ -1,13 +1,13 @@
-import { Link, Navigate } from "react-router-dom";
-import AnimationWrapper from "../common/page-animation";
-import InputBox from "../components/input.component";
-import googleIcon from "../imgs/google.png";
+import axios from "axios";
 import { useContext, useRef } from "react";
 import { Toaster, toast } from "react-hot-toast";
-import axios from "axios";
-import { storeInSession } from "../common/session";
+import { Link, Navigate } from "react-router-dom";
 import { UserContext } from "../App";
 import { authWithGoogle } from "../common/firebase";
+import AnimationWrapper from "../common/page-animation";
+import { storeInSession } from "../common/session";
+import InputBox from "../components/input.component";
+import googleIcon from "../imgs/google.png";
 
 
 
@@ -121,10 +121,10 @@ const UserAuthForm = ({type}) => {
                         { type.replace("-"," ")}
                 </button>
 
-                <div className="relative w-full flex items-center gap-2 my-10 opacity-10 uppercase text-black font-bold">
-                    <hr className="w-1/2 border-black"/>
+                <div className="relative w-full flex items-center gap-2 my-10 opacity-50 uppercase text-white font-bold">
+                    <hr className="w-1/2 border-grey"/>
                     <p>or</p>
-                    <hr className="w-1/2 border-black"/>
+                    <hr className="w-1/2 border-grey"/>
 
                 </div>
 
@@ -135,9 +135,9 @@ const UserAuthForm = ({type}) => {
 
                 {
                     type == "sign-in" ? <p className="mt-6 text-dark-grey text-xl text-center">
-                        Don't have an account ?<Link to="/signup" className="underline text-black text-xl ml-1">join us today</Link>
+                        Don't have an account ?<Link to="/signup" className="underline text-purple text-xl ml-1">join us today</Link>
                     </p> : <p className="mt-6 text-dark-grey text-xl text-center">
-                        Already a member ?<Link to="/signin" className="underline text-black text-xl ml-1">Sign in here</Link>
+                        Already a member ?<Link to="/signin" className="underline text-purple text-xl ml-1">Sign in here</Link>
                     </p>
                 }
 

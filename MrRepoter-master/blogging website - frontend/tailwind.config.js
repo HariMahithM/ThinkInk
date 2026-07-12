@@ -5,9 +5,10 @@ export default {
         
         colors: {
             'white': '#FFFFFF',
-            'black': '#242424',
-            'grey': '#F3F3F3',
-            'dark-grey': '#6B6B6B',
+            'black': '#121212',
+            'dark-bg': '#0a0a0a',
+            'grey': '#2a2a2a',
+            'dark-grey': '#a0a0a0',
             'red': '#FF4E4E',
             'transparent': 'transparent',
             'twitter': '#1DA1F2',

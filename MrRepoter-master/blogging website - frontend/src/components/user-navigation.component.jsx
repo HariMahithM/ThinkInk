@@ -1,8 +1,6 @@
-import { Link } from "react-router-dom";
-import AnimationWrapper from "../common/page-animation";
-import { UserContext } from "../App";
 import { useContext } from "react";
-import React from 'react';
+import { Link } from "react-router-dom";
+import { UserContext } from "../App";
 import { removeFromSession } from "../common/session";
 
 const UserNavigationPanel = () =>{
@@ -15,7 +13,7 @@ const UserNavigationPanel = () =>{
 
     return(
             <div className="absolute right-0 z-50">
-            <div className="bg-white absolute right-0 border border-grey w-60 overflow-hidden duration-200">
+            <div className="bg-black absolute right-0 border border-grey w-60 overflow-hidden duration-200">
             <Link to="/editor" className="flex gap-2 link md:hidden pl-8 py-4">
                 <i className="fi fi-rr-file-edit"></i>
                 <p>Write</p>

@@ -1,27 +1,33 @@
 import Embed from "@editorjs/embed";
-import List from "@editorjs/list";
-import Image from "@editorjs/image";
 import Header from "@editorjs/header";
-import Quote from "@editorjs/quote";
-import Marker from "@editorjs/marker";
+import Image from "@editorjs/image";
 import InlineCode from "@editorjs/inline-code";
+import List from "@editorjs/list";
+import Marker from "@editorjs/marker";
+import Quote from "@editorjs/quote";
 
-const uploadImageByUrl = (e) => {
-    let link = new Promise((resolve,reject) =>{
-        try {
-            resolve(e)
-        }
-        catch{
-            reject(err)
-        }
-    })
-    return link.then(url =>{
-        return {
-            success: 1,
-            file: {url}
-        }
-    })
-}
+const uploadImageByUrl = async (url) => {
+    console.log("uploadByUrl called", url);
+
+    return {
+        success: 1,
+        file: {
+            url: url,
+        },
+    };
+};
+
+const uploadImageByFile = async (file) => {
+    console.log("uploadByFile called", file);
+
+    return {
+        success: 1,
+        file: {
+            url: URL.createObjectURL(file),
+        },
+    };
+};
+
 
 export const tools = {
     embed: Embed,
@@ -40,9 +46,9 @@ export const tools = {
     image: {
         class: Image,
         config: {
-            uploader:{
-                uploadByUrl:uploadImageByUrl,
-                //uploadByFile:uploadImageByFile
+            uploader: {
+                uploadByUrl: uploadImageByUrl,
+                uploadByFile: uploadImageByFile
             }
         }
     },

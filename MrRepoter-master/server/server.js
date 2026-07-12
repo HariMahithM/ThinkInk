@@ -1,17 +1,17 @@
-import express from 'express';
-import mongoose from 'mongoose';
-import 'dotenv/config'
 import bcrypt from 'bcrypt';
-import { nanoid } from 'nanoid';
-import jwt from 'jsonwebtoken';
 import cors from 'cors';
+import 'dotenv/config';
+import express from 'express';
 import admin from "firebase-admin";
-import serviceAccountKey from "./mrrepoter-blogger-firebase-adminsdk-o591e-a844a040e0.json" with {type:'json'}; 
 import { getAuth } from "firebase-admin/auth";
+import jwt from 'jsonwebtoken';
+import mongoose from 'mongoose';
+import { nanoid } from 'nanoid';
+import serviceAccountKey from "./mrrepoter-blogger-firebase-adminsdk-o591e-a844a040e0.json" with { type: 'json' };
 
 
-import User from './Schema/User.js';
 import Blog from './Schema/Blog.js';
+import User from './Schema/User.js';
 
 const server = express();
 let PORT = 3000;
@@ -175,7 +175,7 @@ server.get('/latest-blogs',(req,res)=>{
     .then(blogs =>{
         return res.status(200).json({ blogs })
     }).catch(err => {
-        return res.status(500).json*{error: err.message}
+        return res.status(500).json({error: err.message})
     })
 })
 
@@ -242,17 +242,23 @@ server.post('/create-blog', verifyJWT, (req,res)=>{
 })
 
 server.post("/get-blog", (req, res) => {
-    let { blog_id } = req.body;
-    let incrementVal = 1;
+    let { blog_id, draft, mode } = req.body;
+    let incrementVal = mode !== "edit" ? 1 : 0;
     Blog.findOneAndUpdate({ blog_id }, { $inc: { "activity.total_reads": incrementVal } })
         .populate("author", "personal_info.fullname personal_info.username personal_info.profile_img")
-        .select("title des content banner activity publishedAt blog_id tags")
+        .select("title des content banner activity publishedAt blog_id tags draft")
         .then(blog => {
+            if (!blog) {
+                return res.status(404).json({ error: "Blog not found" });
+            }
+            if (!draft && blog.draft) {
+                return res.status(404).json({ error: "Blog not found" });
+            }
             User.findOneAndUpdate({"personal_info.username": blog.author.personal_info.username },{
                 $inc : {"account_info.total_reads" :incrementVal }
             })
             .catch(err => {
-                return res.status(500).json({error: err.message})
+                console.log(err.message);
             })
 
             return res.status(200).json({ blog });
@@ -262,6 +268,178 @@ server.post("/get-blog", (req, res) => {
         });
 });
 
+// Like/unlike blog
+server.post("/like-blog", verifyJWT, (req, res) => {
+    let user_id = req.user;
+    let { blog_id, is_liked } = req.body;
+    
+    let incrementVal = is_liked ? -1 : 1;
+
+    Blog.findOneAndUpdate({ blog_id }, { $inc: { "activity.total_likes": incrementVal } })
+    .then(blog => {
+        if(!blog) {
+            return res.status(404).json({ error: "Blog not found" });
+        }
+        
+        let updateQuery = is_liked 
+            ? { $pull: { liked_blogs: blog._id } } 
+            : { $addToSet: { liked_blogs: blog._id } };
+            
+        User.findOneAndUpdate({ _id: user_id }, updateQuery)
+        .then(() => {
+            return res.status(200).json({ liked_by_user: !is_liked });
+        })
+        .catch(err => {
+            return res.status(500).json({ error: err.message });
+        });
+    })
+    .catch(err => {
+        return res.status(500).json({ error: err.message });
+    })
+})
+
+// Check if user liked blog
+server.post("/isliked-by-user", verifyJWT, (req, res) => {
+    let user_id = req.user;
+    let { blog_id } = req.body;
+    
+    User.findOne({ _id: user_id })
+    .then(user => {
+        Blog.findOne({ blog_id })
+        .then(blog => {
+            if(!blog) {
+                return res.status(404).json({ error: "Blog not found" });
+            }
+            let is_liked = user.liked_blogs.includes(blog._id);
+            return res.status(200).json({ is_liked });
+        })
+        .catch(err => {
+            return res.status(500).json({ error: err.message });
+        })
+    })
+    .catch(err => {
+        return res.status(500).json({ error: err.message });
+    })
+})
+
+// Search blogs
+server.get("/search", (req, res) => {
+    let { query } = req.query;
+    
+    Blog.find({
+        draft: false,
+        $or: [
+            { title: { $regex: query, $options: "i" } },
+            { des: { $regex: query, $options: "i" } },
+            { tags: { $in: [new RegExp(query, "i")] } }
+        ]
+    })
+    .populate("author", "personal_info.profile_img personal_info.username personal_info.fullname -_id")
+    .sort({ "activity.total_reads": -1, "activity.total_likes": -1, "publishedAt": -1 })
+    .select("blog_id title des banner activity tags publishedAt -_id")
+    .then(blogs => {
+        return res.status(200).json({ blogs });
+    })
+    .catch(err => {
+        return res.status(500).json({ error: err.message });
+    })
+})
+
+// Get all blogs with pagination
+server.post("/all-blogs", (req, res) => {
+    let { page, tag, query, author, limit, eliminate_blog } = req.body;
+    
+    let maxLimit = limit || 5;
+    
+    let findQuery = { draft: false };
+    
+    if(tag) {
+        findQuery.tags = tag;
+    }
+    if(query) {
+        findQuery.$or = [
+            { title: { $regex: query, $options: "i" } },
+            { des: { $regex: query, $options: "i" } },
+        ];
+    }
+    if(author) {
+        findQuery.author = author;
+    }
+    if(eliminate_blog) {
+        findQuery.blog_id = { $ne: eliminate_blog };
+    }
+    
+    Blog.find(findQuery)
+    .populate("author", "personal_info.profile_img personal_info.username personal_info.fullname -_id")
+    .sort({ "publishedAt": -1 })
+    .select("blog_id title des banner activity tags publishedAt -_id")
+    .skip((page - 1) * maxLimit)
+    .limit(maxLimit)
+    .then(blogs => {
+        return res.status(200).json({ blogs });
+    })
+    .catch(err => {
+        return res.status(500).json({ error: err.message });
+    })
+})
+
+
+// Get user's blogs/drafts
+server.get("/user-blogs", verifyJWT, (req, res) => {
+    let user_id = req.user;
+    let { draft } = req.query;
+    let findQuery = { author: user_id };
+    if(draft !== undefined) {
+        findQuery.draft = draft === 'true';
+    }
+    Blog.find(findQuery)
+    .populate("author", "personal_info.profile_img personal_info.username personal_info.fullname -_id")
+    .sort({ "publishedAt": -1 })
+    .select("blog_id title des banner activity tags publishedAt draft -_id")
+    .then(blogs => {
+        return res.status(200).json({ blogs });
+    })
+    .catch(err => {
+        return res.status(500).json({ error: err.message });
+    })
+})
+
+// Update blog/draft
+server.put("/update-blog", verifyJWT, (req, res) => {
+    let authorId = req.user;
+    let { blog_id, title, des, banner, tags, content, draft } = req.body;
+
+    if(!blog_id) {
+        return res.status(400).json({ error: "Blog ID is required" });
+    }
+    if(!title.length) {
+        return res.status(403).json({ error: "You must provide title" });
+    }
+    
+    let updateData = { 
+        title,
+        draft: Boolean(draft),
+    };
+    if(des) updateData.des = des;
+    if(banner) updateData.banner = banner;
+    if(tags) updateData.tags = tags.map(tag => tag.toLowerCase());
+    if(content) updateData.content = content;
+
+    Blog.findOneAndUpdate(
+        { blog_id, author: authorId },
+        updateData,
+        { new: true }
+    )
+    .then(blog => {
+        if(!blog) {
+            return res.status(404).json({ error: "Blog not found or not authorized" });
+        }
+        return res.status(200).json({ id: blog.blog_id });
+    })
+    .catch(err => {
+        return res.status(500).json({ error: err.message });
+    })
+})
 
 server.listen(PORT, () =>{
     console.log("listening to port->"+ PORT)

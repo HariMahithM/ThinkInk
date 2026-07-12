@@ -1,10 +1,10 @@
+import axios from "axios";
 import { useContext } from "react";
 import { Toaster, toast } from "react-hot-toast";
+import { useNavigate } from "react-router-dom";
+import { UserContext } from "../App";
 import { EditorContext } from "../pages/editor.pages";
 import Tag from "./tags.component";
-import axios from "axios";
-import { UserContext } from "../App";
-import { useNavigate } from "react-router-dom";
 
 const PublishForm = () => {
     let characterLimit = 200;
@@ -51,26 +51,30 @@ const PublishForm = () => {
             return;
         }
         if(!title.length){
-            return res.status(403).json({error:"You must provide title"})
+            toast.error("You must provide title");
+            return;
         }
         if(!des.length || des.length >200){
-            return res.status(403).json({error:"You must provide blog desc"})
+            toast.error("You must provide blog desc");
+            return;
         }
         if(!tags.length || tags.length > 10){
-            return res.status(403).json({error:"enter tags"})
+            toast.error("Enter tags");
+            return;
         }
         let loadingToast = toast.loading("Publishing...");
         e.target.classList.add('disable');
 
         let blogObj = {
-            title,banner,des,content,tags, draft:false
+            title,banner,des,content,tags, draft:false,
+            ...(blog.blog_id ? { blog_id: blog.blog_id } : {})
         }
 
-        axios.post(import.meta.env.VITE_SERVER_DOMAIN + "/create-blog",blogObj,{
-            headers:{
-                'Authorization':`Bearer ${access_token}`
-            }
-        })
+        const request = blog.blog_id 
+            ? axios.put(import.meta.env.VITE_SERVER_DOMAIN + "/update-blog", blogObj, { headers: { 'Authorization': `Bearer ${access_token}` } })
+            : axios.post(import.meta.env.VITE_SERVER_DOMAIN + "/create-blog", blogObj, { headers: { 'Authorization': `Bearer ${access_token}` } });
+        
+        request
         .then(()=>{
             e.target.classList.remove('disable');
             toast.dismiss(loadingToast);
@@ -79,13 +83,20 @@ const PublishForm = () => {
             setTimeout(() => {
                 navigate("/")
             }, 2000);
-    })
-    .catch(({response}) =>{
-            e.target.classList.remove('disable'); 
-            toast.dismiss(loadingToast);
-            return toast.error(response.data.error) 
-    })
-    
+        })
+        .catch((error) => {
+    e.target.classList.remove("disable");
+    toast.dismiss(loadingToast);
+
+    console.log(error);
+
+    if (error.response) {
+        toast.error(error.response.data.error || "Something went wrong");
+    } else {
+        toast.error(error.message || "Unable to connect to the server");
+    }
+});
+        
     }
     return (
         <section className="w-screen min-h-screen grid items-center lg:grid-cols-2 py-16 lg:gap-4">
@@ -120,7 +131,7 @@ const PublishForm = () => {
                 <p className="text-dark-grey mb-2 mt-9">Topics - (Helps in searching and ranking your news)</p>
 
                 <div className="relative input-box pl-2 py-2 pb-4">
-                    <input type="text" placeholder="Topic" className="sticky input-box bg-white top-0 left-0 pl-4 mb-3 focus:bg-white" onKeyDown={handleKeyDown}/>
+                    <input type="text" placeholder="Topic" className="sticky input-box top-0 left-0 pl-4 mb-3" onKeyDown={handleKeyDown}/>
                     { tags.map((tag, i) => {
                         return <Tag tag={tag} tagIndex={i} key={i}/>
                     })
@@ -136,4 +147,3 @@ const PublishForm = () => {
 }
 
 export default PublishForm;
-

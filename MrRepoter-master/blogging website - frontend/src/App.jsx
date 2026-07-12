@@ -1,12 +1,12 @@
+import { createContext, useEffect, useState } from "react";
 import { Route, Routes } from "react-router-dom";
-import Navbar from "./components/navbar.component";
-import UserAuthForm from "./pages/userAuthForm.page";
-import { createContext, useState } from "react";
 import { lookInSession } from "./common/session";
-import { useEffect } from "react";
+import Navbar from "./components/navbar.component";
+import BlogPage from "./pages/blog.page";
 import Editor from "./pages/editor.pages";
 import HomePage from "./pages/home.page";
-import BlogPage from "./pages/blog.page";
+import SearchPage from "./pages/search.page";
+import UserAuthForm from "./pages/userAuthForm.page";
 
 export const UserContext = createContext({})
 
@@ -27,6 +27,7 @@ const App = () => {
                     <Route path="/signin" element={<UserAuthForm type="sign-in"/>}/>   
                     <Route path="/signup" element={<UserAuthForm type="sign-up"/>}/>
                     <Route path="blog/:blog_id" element={<BlogPage />}/>
+                    <Route path="/search" element={<SearchPage />}/>
                 </Route>
             </Routes>
         </UserContext.Provider>

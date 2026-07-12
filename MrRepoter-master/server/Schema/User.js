@@ -80,6 +80,11 @@ const userSchema = mongoose.Schema({
         type: [ Schema.Types.ObjectId ],
         ref: 'blogs',
         default: [],
+    },
+    liked_blogs: {
+        type: [ Schema.Types.ObjectId ],
+        ref: 'blogs',
+        default: [],
     }
 
 }, 
